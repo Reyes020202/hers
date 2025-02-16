@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Publicaciones</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: url('3d-cartoon-background-children.jpg') no-repeat center center fixed;
+            background-size: cover;
+        }
+        .header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            display: flex;
+            justify-content: space-around;
+        }
+        .header img {
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+        }
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .post {
+            background-color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 80%;
+            margin: 10px 0;
+        }
+        .post textarea,
+        .post input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .post button {
+            padding: 10px;
+            background-color: #4CAF50;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .post button:hover {
+            background-color: #45a049;
+        }
+        .comments {
+            margin-top: 10px;
+        }
+        .comment {
+            background-color: #f1f1f1;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .comment p {
+            margin: 0;
+        }
+        .comment button {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .comment button:hover {
+            background-color: #d32f2f;
+        }
+    </style>
+    <!-- Scripts de Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-storage.js"></script>
+    <script>
+        // Configuración de Firebase de tu proyecto
+        var firebaseConfig = {
+            apiKey: "AIzaSyDOK0pXcof8Q1jKBTAEAlpOSxpnRxD9imk",
+            authDomain: "dayclass-4f7f4.firebaseapp.com",
+            projectId: "dayclass-4f7f4",
+            storageBucket: "dayclass-4f7f4.appspot.com",
+            messagingSenderId: "786679234380",
+            appId: "1:786679234380:web:4a44f9fb03f29da65f59e9"
+        };
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+    </script>
+</head>
+<body>
+    <div class="header">
+        <img src="socializacion.png" alt="Publicaciones" onclick="location.href='publicaciones.html'">
+        <img src="borrador-de-pizarra.png" alt="Pizarra" onclick="location.href='pizarra.html'">
+        <img src="calculadora.png" alt="Calculadora" onclick="location.href='calculadora.html'">
+    </div>
+    <div class="content">
+        <div class="post">
+            <textarea id="new-post" placeholder="Comenta tu duda!"></textarea>
+            <input type="file" id="post-image">
+            <button onclick="addPost()">Publicar</button>
+        </div>
+        <div id="posts"></div>
+    </div>
+    <script>
+        // Aquí va el resto del código JavaScript relacionado con Firebase
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                loadPosts();
+            } else {
+                window.location.href = 'login.html';
+            }
+        });
+
+        function addPost() {
+            const user = auth.currentUser;
+            const text = document.getElementById('new-post').value;
+            const fileInput = document.getElementById('post-image');
+            const file = fileInput.files[0];
+
+            if (text || file) {
+                const post = {
+                    text,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    user: user.email,
+                    imageUrl: null
+                };
+
+                if (file) {
+                    const storageRef = storage.ref().child(`images/${file.name}`);
+                    storageRef.put(file).then(snapshot => {
+                        snapshot.ref.getDownloadURL().then(downloadURL => {
+                            post.imageUrl = downloadURL;
+                            db.collection('posts').add(post).then(() => {
+                                loadPosts();
+                            });
+                        });
+                    });
+                } else {
+                    db.collection('posts').add(post).then(() => {
+                        loadPosts();
+                    });
+                }
+
+                document.getElementById('new-post').value = '';
+                fileInput.value = '';
+            }
+        }
+
+        function loadPosts() {
+            const postsDiv = document.getElementById('posts');
+            postsDiv.innerHTML = '';
+            db.collection('posts')
+                .orderBy('timestamp', 'desc')
+                .onSnapshot(snapshot => {
+                    postsDiv.innerHTML = '';
+                    snapshot.forEach(doc => {
+                        const post = doc.data();
+                        if (new Date() - post.timestamp.toDate() < 24 * 60 * 60 * 1000) { // Mostrar publicaciones del último día
+                            const postDiv = document.createElement('div');
+                            postDiv.className = 'post';
+                            postDiv.innerHTML = `
+                                <p><strong>${post.user}:</strong> ${post.text}</p>
+                                ${post.imageUrl ? `<img src="${post.imageUrl}" alt="Imagen de la publicación" style="width:100%; margin-top: 10px;">` : ''}
+                                <textarea id="comment-${doc.id}" placeholder="Escribe un comentario..."></textarea>
+                                <button onclick="addComment('${doc.id}')">Comentar</button>
+                                <button onclick="deletePost('${doc.id}')">Borrar Publicación</button>
+                                <div class="comments" id="comments-${doc.id}"></div>
+                            `;
+                            postsDiv.appendChild(postDiv);
+                            loadComments(doc.id);
+                        }
+                    });
+                });
+        }
+
+        function addComment(postId) {
+            const user = auth.currentUser;
+            const commentText = document.getElementById(`comment-${postId}`).value;
+
+            if (commentText) {
+                const comment = {
+                    text: commentText,
+                    user: user.email,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                db.collection('posts').doc(postId).collection('comments').add(comment).then(() => {
+                    loadComments(postId);
+                });
+
+                document.getElementById(`comment-${postId}`).value = '';
+            }
+        }
+
+        function loadComments(postId) {
+            const commentsDiv = document.getElementById(`comments-${postId}`);
+            commentsDiv.innerHTML = '';
+            db.collection('posts').doc(postId).collection('comments')
+                .orderBy('timestamp', 'desc')
+                .onSnapshot(snapshot => {
+                    commentsDiv.innerHTML = '';
+                    snapshot.forEach(doc => {
+                        const comment = doc.data();
+                        const commentDiv = document.createElement('div');
+                        commentDiv.className = 'comment';
+                        commentDiv.innerHTML = `
+                            <p><strong>${comment.user}:</strong> ${comment.text}</p>
+                            <button onclick="deleteComment('${postId}', '${doc.id}')">Borrar Comentario</button>
+                        `;
+                        commentsDiv.appendChild(commentDiv);
+                    });
+                });
+        }
+
+        function deletePost(postId) {
+            db.collection('posts').doc(postId).delete().then(() => {
+                loadPosts();
+            });
+        }
+
+        function deleteComment(postId, commentId) {
+            db.collection('posts').doc(postId).collection('comments').doc(commentId).delete().then(() => {
+                loadComments(postId);
+            });
+        }
+    </script>
+</body>
+</html>
