@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página de Inicio de Sesión</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: url('3d-cartoon-background-children.jpg') no-repeat center center fixed;
+            background-size: cover;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+        }
+        .container h2 {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .container input[type="text"],
+        .container input[type="password"],
+        .container input[type="email"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .container button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .container button:hover {
+            background-color: #45a049;
+        }
+        .container p {
+            text-align: center;
+        }
+        .container a {
+            color: #4CAF50;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .container a:hover {
+            text-decoration: underline;
+        }
+        .error-message, .success-message {
+            text-align: center;
+            margin-top: 10px;
+        }
+        .error-message {
+            color: red;
+        }
+        .success-message {
+            color: green;
+        }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-firestore.js"></script>
+    <script>
+        // La configuración de Firebase de tu aplicación web
+        const firebaseConfig = {
+            apiKey: "AIzaSyDOK0pXcof8Q1jKBTAEAlpOSxpnRxD9imk",
+            authDomain: "dayclass-4f7f4.firebaseapp.com",
+            projectId: "dayclass-4f7f4",
+            storageBucket: "dayclass-4f7f4.firebasestorage.app",
+            messagingSenderId: "786679234380",
+            appId: "1:786679234380:web:4a44f9fb03f29da65f59e9"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        function login(event) {
+            event.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    alert('Inicio de sesión exitoso');
+                    window.location.href = 'index.html';  // Redirigir a index.html
+                })
+                .catch((error) => {
+                    alert('Error en el inicio de sesión: ' + error.message);
+                });
+        }
+
+        function register(event) {
+            event.preventDefault();
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const username = document.getElementById('reg-username').value;
+
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    return db.collection('users').doc(userCredential.user.uid).set({
+                        email: email,
+                        username: username
+                    });
+                })
+                .then(() => {
+                    alert('Registro exitoso');
+                    showLoginForm();
+                })
+                .catch((error) => {
+                    alert('Error en el registro: ' + error.message);
+                });
+        }
+
+        function showLoginForm() {
+            document.getElementById('login-form').style.display = 'block';
+            document.getElementById('register-form').style.display = 'none';
+        }
+
+        function showRegisterForm() {
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('register-form').style.display = 'block';
+        }
+
+        function redirectToIndex() {
+            window.location.href = 'index.html';
+        }
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then((registration) => {
+                        console.log('Service Worker registrado con éxito:', registration);
+                    })
+                    .catch((error) => {
+                        console.log('Error al registrar el Service Worker:', error);
+                    });
+            });
+        }
+    </script>
+</head>
+<body>
+    <div class="container" id="login-form">
+        <h2>Inicio de Sesión</h2>
+        <form onsubmit="login(event)">
+            <input type="email" id="email" placeholder="Correo Electrónico" name="email" required>
+            <input type="password" id="password" placeholder="Contraseña" name="password" required>
+            <button type="submit">Iniciar Sesión</button>
+        </form>
+        <p>No tienes una cuenta? <a onclick="showRegisterForm()">Regístrate</a></p>
+        <button onclick="redirectToIndex()">Ir a Página Principal</button>
+    </div>
+    <div class="container" id="register-form" style="display: none;">
+        <h2>Registro</h2>
+        <form onsubmit="register(event)">
+            <input type="email" id="reg-email" placeholder="Correo Electrónico" name="email" required>
+            <input type="password" id="reg-password" placeholder="Contraseña" name="password" required>
+            <input type="text" id="reg-username" placeholder="Nombre de Usuario" name="username" required>
+            <button type="submit">Registrar</button>
+        </form>
+        <p>¿Ya tienes una cuenta? <a onclick="showLoginForm()">Inicia Sesión</a></p>
+    </div>
+    
+</body>
+</html>
